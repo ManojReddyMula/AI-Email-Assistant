@@ -1,0 +1,2 @@
+email-write(1).zip filter=lfs diff=lfs merge=lfs -text
+hello-world-ext filter=lfs diff=lfs merge=lfs -text

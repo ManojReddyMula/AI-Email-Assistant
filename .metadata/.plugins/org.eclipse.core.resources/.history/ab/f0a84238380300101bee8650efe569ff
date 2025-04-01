@@ -1,0 +1,5 @@
+package com.email_writer.service;
+
+public class EmailService {
+
+}

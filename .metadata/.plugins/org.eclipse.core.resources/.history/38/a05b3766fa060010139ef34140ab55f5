@@ -1,0 +1,99 @@
+package com.email_writer.service;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.email_writer.entity.EmailRequest;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@Service
+
+public class EmailService {
+	
+
+    private  WebClient webClient;
+
+    @Value("${gemini.api.url}")
+    private String geminiApiUrl;
+
+    @Value("${gemini.api.key}")
+    private String geminiApiKey;
+    
+    public EmailService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.build();
+    }
+
+
+    public String generateEmailReply(EmailRequest emailRequest) {
+        // Build the prompt
+        String prompt = buildPrompt(emailRequest);
+
+        // Build request body with role 'user'
+        Map<String, Object> requestBody = Map.of(
+            "contents", new Object[] {
+                Map.of(
+                    "role", "user",
+                    "parts", new Object[] {
+                        Map.of("text", prompt)
+                    }
+                )
+            }
+        );
+
+        // Perform request
+        String fullUrl = geminiApiUrl + "?key=" + geminiApiKey;
+        System.out.println("Calling URL: " + fullUrl); // Optional debug log
+
+        String response = webClient.post()
+            .uri(fullUrl)
+            .header("Content-Type", "application/json")
+            .bodyValue(requestBody)
+            .retrieve()
+            .bodyToMono(String.class)
+            .block();
+
+        return extractResponseContent(response);
+    }
+
+
+    private String extractResponseContent(String response) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(response);
+
+            // Debug output
+            System.out.println("Raw Gemini API response: " + rootNode);
+
+            return rootNode.path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText("No response generated");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error processing API response: " + e.getMessage();
+        }
+    }
+    private String buildPrompt(EmailRequest emailRequest) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Generate a professional email reply for the following email content. ");
+        if (emailRequest.getTone() != null && !emailRequest.getTone().isEmpty()) {
+        	prompt.append("Use a ").append(emailRequest.getTone()).append(" tone. ");
+
+        }
+        prompt.append("\nOriginal email: \n").append(emailRequest.getEmailcontent());
+        return prompt.toString();
+    }
+    
+   
+	
+
+}

@@ -1,0 +1,24 @@
+package com.chatbotapplication.service;
+
+import org.springframework.ai.openai.OpenAiChatClient;
+import org.springframework.stereotype.Service;
+import com.chatbotapplication.repository.ChatRepository;
+
+@Service
+public class ChatService {
+
+    private final OpenAiChatClient openAiChatClient;
+    private final ChatRepository chatRepository;
+
+    public ChatService(OpenAiChatClient openAiChatClient, ChatRepository chatRepository) {
+        this.openAiChatClient = openAiChatClient;
+        this.chatRepository = chatRepository;
+    }
+
+    public ChatMessage sendMessage(String userMessage) {
+        String botResponse = openAiChatClient.call(userMessage);
+
+        ChatMessage chatMessage = new ChatMessage(null, userMessage, botResponse);
+        return chatRepository.save(chatMessage);
+    }
+}
